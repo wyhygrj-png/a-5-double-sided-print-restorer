@@ -1,2 +1,3 @@
 # a-5-double-sided-print-restorer
 解决部分激光打印机只能a4自动双面打印，a5无法双面打印的问题，有些打印机强行a5自动双面打印会卡纸，因此增加pdf奇偶分离功能手动翻面打印，同时增加删除特定界面的功能，以此来省碳粉（或墨水）
+地址：https://wyhygrj-png.github.io/a-5-double-sided-print-restorer/
