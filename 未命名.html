@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>? 轻量PDF工具 · 奇偶分离 & 删页</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(145deg, #f5f7fa 0%, #e9ecf2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        .card {
+            max-width: 680px;
+            width: 100%;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 36px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08), 0 6px 12px rgba(0,0,0,0.05);
+            padding: 24px 22px 32px;
+            border: 1px solid rgba(255,255,255,0.6);
+            transition: all 0.2s;
+        }
+        h1 {
+            font-size: 1.9rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin: 0 0 6px 0;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .subhead {
+            color: #475569;
+            margin-top: 0;
+            margin-bottom: 24px;
+            font-weight: 400;
+            font-size: 1rem;
+            border-left: 4px solid #3b82f6;
+            padding-left: 16px;
+        }
+        .upload-area {
+            background: #ffffffd6;
+            border: 2px dashed #94a3b8;
+            border-radius: 28px;
+            padding: 28px 18px;
+            text-align: center;
+            margin-bottom: 24px;
+            transition: border 0.15s, background 0.15s;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #ffffffec;
+        }
+        .upload-area.dragover {
+            border-color: #2563eb;
+            background: #eef2ff;
+        }
+        .upload-icon {
+            font-size: 42px;
+            margin-bottom: 8px;
+        }
+        .file-name {
+            font-weight: 500;
+            color: #0f172a;
+            margin-top: 12px;
+            word-break: break-all;
+        }
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 24px 0 18px;
+        }
+        .btn {
+            background: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.02);
+            border: 1px solid #cbd5e1;
+            flex: 1 0 140px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #1e293b;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #f8fafc;
+        }
+        .btn-primary {
+            background: #1e293b;
+            border-color: #1e293b;
+            color: white;
+            box-shadow: 0 8px 18px rgba(30,41,59,0.15);
+        }
+        .btn-primary:active {
+            background: #0f172a;
+            transform: scale(0.98);
+        }
+        .btn:active {
+            transform: scale(0.98);
+            background: #eef2ff;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            filter: grayscale(0.3);
+        }
+        .delete-section {
+            margin: 18px 0 8px;
+            padding: 16px 0 6px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .label {
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 8px;
+            display: block;
+            font-size: 0.95rem;
+        }
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        input {
+            flex: 2;
+            min-width: 200px;
+            padding: 14px 18px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 40px;
+            font-size: 1rem;
+            background: white;
+            outline: none;
+            transition: border 0.15s;
+        }
+        input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        }
+        .example {
+            color: #64748b;
+            font-size: 0.8rem;
+            margin-top: 8px;
+            padding-left: 12px;
+        }
+        .status {
+            min-height: 32px;
+            margin: 18px 0 8px;
+            font-weight: 500;
+            color: #2563eb;
+        }
+        .error {
+            color: #b91c1c;
+            background: #fee2e2;
+            padding: 12px 18px;
+            border-radius: 60px;
+        }
+        .info-note {
+            background: #f1f5f9;
+            border-radius: 24px;
+            padding: 12px 18px;
+            font-size: 0.9rem;
+            color: #334155;
+        }
+        footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+    <!-- 引入 pdf-lib 库 -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+</head>
+<body>
+<div class="card">
+    <h1>
+        <span>? PDF 百宝箱</span>
+    </h1>
+    <div class="subhead">奇偶页分离 · 精准删页 · 本地运行</div>
+
+    <!-- 上传区域 -->
+    <div id="dropZone" class="upload-area">
+        <div class="upload-icon">?</div>
+        <div style="font-weight:500;">点击或拖拽上传 PDF</div>
+        <div style="font-size:0.85rem; color:#64748b; margin-top:6px;">支持手机/电脑，不上传服务器</div>
+        <div id="fileNameDisplay" class="file-name"></div>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf,application/pdf" style="display:none;">
+
+    <!-- 操作按钮组 -->
+    <div class="btn-group">
+        <button id="splitBtn" class="btn" disabled>? 奇偶页分离</button>
+        <button id="deleteBtn" class="btn btn-primary" disabled>?? 删除指定页面</button>
+    </div>
+
+    <!-- 删除页面输入区 -->
+    <div class="delete-section">
+        <span class="label">?? 要删除的页码：</span>
+        <div class="input-wrapper">
+            <input type="text" id="pageRangeInput" placeholder="例如 5 或 2-4 或 1,3,7-9" value="">
+            <button id="applyDeleteBtn" class="btn" style="flex:0.5;" disabled>执行删除</button>
+        </div>
+        <div class="example">支持单个、范围、混合：<code>2,5,10-12</code>  （页码从1开始）</div>
+    </div>
+
+    <!-- 状态区 -->
+    <div id="statusMessage" class="status"></div>
+    
+    <!-- 提示卡片 -->
+    <div class="info-note">
+        ? 所有处理均在您的设备完成，文件不会上传。处理大文件时请稍候。
+    </div>
+    <footer>? 隐私安全 · 基于 PDF-Lib</footer>
+</div>
+
+<script>
+    (function(){
+        "use strict";
+
+        // DOM 元素
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const splitBtn = document.getElementById('splitBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const applyDeleteBtn = document.getElementById('applyDeleteBtn');
+        const pageRangeInput = document.getElementById('pageRangeInput');
+        const statusEl = document.getElementById('statusMessage');
+
+        // 当前加载的 PDF 文件 (ArrayBuffer)
+        let currentPdfBytes = null;
+        let currentPdfName = 'document.pdf';
+        let totalPages = 0;
+
+        // ---------- 辅助函数 ----------
+        function setStatus(msg, isError = false) {
+            statusEl.textContent = msg;
+            statusEl.classList.toggle('error', isError);
+            if (!isError && msg) {
+                statusEl.style.color = '#2563eb';
+            }
+        }
+
+        function clearStatus() {
+            statusEl.textContent = '';
+            statusEl.classList.remove('error');
+        }
+
+        // 启用/禁用操作按钮
+        function setButtonsEnabled(enabled) {
+            splitBtn.disabled = !enabled;
+            deleteBtn.disabled = !enabled;
+            applyDeleteBtn.disabled = !enabled;
+        }
+
+        // 重置界面状态
+        function resetUI() {
+            currentPdfBytes = null;
+            totalPages = 0;
+            fileNameDisplay.textContent = '';
+            pageRangeInput.value = '';
+            setButtonsEnabled(false);
+        }
+
+        // 更新文件名和总页数
+        async function updateFileInfo(file) {
+            if (!file) {
+                resetUI();
+                return;
+            }
+            currentPdfName = file.name || 'document.pdf';
+            fileNameDisplay.textContent = `? ${currentPdfName}`;
+            
+            // 读取文件并获取页数
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                currentPdfBytes = arrayBuffer;
+                const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+                totalPages = pdfDoc.getPageCount();
+                setStatus(`? 已加载 PDF (${totalPages} 页)`, false);
+                setButtonsEnabled(true);
+            } catch (e) {
+                setStatus(`? 无法读取PDF: ${e.message}`, true);
+                resetUI();
+            }
+        }
+
+        // 处理文件上传
+        async function handleFile(file) {
+            if (!file) return;
+            if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+                setStatus('?? 请选择 PDF 文件', true);
+                return;
+            }
+            await updateFileInfo(file);
+        }
+
+        // ---------- 事件绑定 ----------
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) handleFile(file);
+            fileInput.value = ''; // 允许重复选同一个文件
+        });
+
+        // ---------- 修复后的奇偶页分离 ----------
+        splitBtn.addEventListener('click', async () => {
+            if (!currentPdfBytes) {
+                setStatus('请先上传 PDF', true);
+                return;
+            }
+            try {
+                setStatus('? 正在分离奇偶页...');
+                const sourceDoc = await PDFLib.PDFDocument.load(currentPdfBytes);
+                const pageCount = sourceDoc.getPageCount();
+
+                // 分别准备奇数页和偶数页的索引数组
+                const oddIndices = [];
+                const evenIndices = [];
+                for (let i = 0; i < pageCount; i++) {
+                    if ((i + 1) % 2 === 1) oddIndices.push(i);
+                    else evenIndices.push(i);
+                }
+
+                // 创建两个空白文档
+                const oddPdf = await PDFLib.PDFDocument.create();
+                const evenPdf = await PDFLib.PDFDocument.create();
+
+                // 分别复制奇数页到 oddPdf，偶数页到 evenPdf
+                if (oddIndices.length > 0) {
+                    const oddPages = await oddPdf.copyPages(sourceDoc, oddIndices);
+                    oddPages.forEach(page => oddPdf.addPage(page));
+                }
+                if (evenIndices.length > 0) {
+                    const evenPages = await evenPdf.copyPages(sourceDoc, evenIndices);
+                    evenPages.forEach(page => evenPdf.addPage(page));
+                }
+
+                // 保存并下载
+                const oddBytes = await oddPdf.save();
+                const evenBytes = await evenPdf.save();
+                
+                const baseName = currentPdfName.replace(/\.pdf$/i, '');
+                downloadBlob(oddBytes, `${baseName}_奇数页.pdf`);
+                downloadBlob(evenBytes, `${baseName}_偶数页.pdf`);
+                
+                setStatus('? 奇偶页分离完成！已开始下载两个文件。');
+            } catch (e) {
+                setStatus(`? 分离失败: ${e.message}`, true);
+            }
+        });
+
+        // 解析页码字符串 (支持 "2,5,7-9" 等)
+        function parsePageRanges(inputStr, maxPage) {
+            if (!inputStr.trim()) return new Set();
+            const pagesSet = new Set();
+            const parts = inputStr.split(',').map(s => s.trim()).filter(s => s);
+            for (const part of parts) {
+                if (part.includes('-')) {
+                    const [startStr, endStr] = part.split('-').map(s => s.trim());
+                    const start = parseInt(startStr, 10);
+                    const end = parseInt(endStr, 10);
+                    if (isNaN(start) || isNaN(end) || start < 1 || end > maxPage || start > end) {
+                        throw new Error(`范围无效: ${part} (页码1~${maxPage})`);
+                    }
+                    for (let p = start; p <= end; p++) pagesSet.add(p);
+                } else {
+                    const num = parseInt(part, 10);
+                    if (isNaN(num) || num < 1 || num > maxPage) {
+                        throw new Error(`页码无效: ${part} (范围1~${maxPage})`);
+                    }
+                    pagesSet.add(num);
+                }
+            }
+            return pagesSet;
+        }
+
+        // 删除页面功能
+        async function performDelete() {
+            if (!currentPdfBytes) {
+                setStatus('请先上传 PDF', true);
+                return;
+            }
+            const rangeStr = pageRangeInput.value.trim();
+            if (!rangeStr) {
+                setStatus('请输入要删除的页码', true);
+                return;
+            }
+            try {
+                setStatus('? 正在处理删除...');
+                const pdfDoc = await PDFLib.PDFDocument.load(currentPdfBytes);
+                const pageCount = pdfDoc.getPageCount();
+                
+                const pagesToDelete = parsePageRanges(rangeStr, pageCount);
+                if (pagesToDelete.size === 0) {
+                    setStatus('没有有效的页码', true);
+                    return;
+                }
+
+                const indicesToKeep = [];
+                for (let i = 0; i < pageCount; i++) {
+                    if (!pagesToDelete.has(i + 1)) {
+                        indicesToKeep.push(i);
+                    }
+                }
+                
+                if (indicesToKeep.length === 0) {
+                    setStatus('?? 删除后没有剩余页面，操作取消', true);
+                    return;
+                }
+
+                const newPdf = await PDFLib.PDFDocument.create();
+                const copiedPages = await newPdf.copyPages(pdfDoc, indicesToKeep);
+                copiedPages.forEach(page => newPdf.addPage(page));
+
+                const pdfBytes = await newPdf.save();
+                const baseName = currentPdfName.replace(/\.pdf$/i, '');
+                const sortedPages = Array.from(pagesToDelete).sort((a,b)=>a-b).join(',');
+                downloadBlob(pdfBytes, `${baseName}_已删页(${sortedPages}).pdf`);
+                
+                setStatus(`? 已删除页面: ${sortedPages}，新文件共 ${newPdf.getPageCount()} 页。`);
+            } catch (e) {
+                setStatus(`? 删除失败: ${e.message}`, true);
+            }
+        }
+
+        // 删除主按钮 + 执行按钮 联动
+        deleteBtn.addEventListener('click', () => {
+            pageRangeInput.focus();
+        });
+        
+        applyDeleteBtn.addEventListener('click', performDelete);
+
+        pageRangeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (applyDeleteBtn.disabled) return;
+                performDelete();
+            }
+        });
+
+        // 下载 Blob
+        function downloadBlob(bytes, fileName) {
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 初始状态
+        setButtonsEnabled(false);
+        resetUI();
+    })();
+</script>
+</body>
+</html>
